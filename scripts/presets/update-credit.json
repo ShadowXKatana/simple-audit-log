@@ -1,0 +1,21 @@
+{
+    "actor": {
+        "user_id": "EMP-001",
+        "role": "ADMIN",
+        "ip_address": "192.168.1.100"
+    },
+    "event": {
+        "action": "UPDATE",
+        "module": "credit-management",
+        "outcome": "SUCCESS"
+    },
+    "target": {
+        "resource_type": "credit_limit",
+        "resource_id": "CL-2026-0001"
+    },
+    "changes": {
+        "field": "credit_limit",
+        "old_value": 50000,
+        "new_value": 100000
+    }
+}

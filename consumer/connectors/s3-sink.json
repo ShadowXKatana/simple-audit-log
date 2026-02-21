@@ -1,0 +1,29 @@
+{
+    "name": "audit-log-s3-sink",
+    "config": {
+        "connector.class": "io.confluent.connect.s3.S3SinkConnector",
+        "topics": "audit-log",
+        "s3.bucket.name": "audit-log-archive",
+        "s3.region": "us-east-1",
+        "store.url": "http://minio:9000",
+        "format.class": "io.confluent.connect.s3.format.parquet.ParquetFormat",
+        "parquet.codec": "snappy",
+        "partitioner.class": "io.confluent.connect.storage.partitioner.TimeBasedPartitioner",
+        "path.format": "'year'=YYYY/'month'=MM/'day'=dd",
+        "locale": "en-US",
+        "timezone": "UTC",
+        "partition.duration.ms": "86400000",
+        "timestamp.extractor": "Record",
+        "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+        "value.converter": "io.confluent.connect.avro.AvroConverter",
+        "value.converter.schema.registry.url": "http://schema-registry:8081",
+        "flush.size": "1000",
+        "rotate.interval.ms": "3600000",
+        "tasks.max": "2",
+        "errors.tolerance": "all",
+        "errors.deadletterqueue.topic.name": "audit-log-s3-dlq",
+        "errors.deadletterqueue.topic.replication.factor": "1",
+        "errors.deadletterqueue.context.headers.enable": "true",
+        "storage.class": "io.confluent.connect.s3.storage.S3Storage"
+    }
+}

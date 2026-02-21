@@ -1,0 +1,17 @@
+{
+    "actor": {
+        "user_id": "USR-2026-0042",
+        "role": "USER",
+        "ip_address": "203.0.113.42",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+    },
+    "event": {
+        "action": "AUTHENTICATION",
+        "module": "auth",
+        "outcome": "SUCCESS"
+    },
+    "target": {
+        "resource_type": "session",
+        "resource_id": "SES-2026-abcdef"
+    }
+}

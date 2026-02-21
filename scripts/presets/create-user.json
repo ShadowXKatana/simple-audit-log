@@ -1,0 +1,25 @@
+{
+    "actor": {
+        "user_id": "ADMIN-001",
+        "role": "SUPER_ADMIN",
+        "ip_address": "10.0.0.1"
+    },
+    "event": {
+        "action": "CREATE",
+        "module": "user-management",
+        "outcome": "SUCCESS"
+    },
+    "target": {
+        "resource_type": "user_account",
+        "resource_id": "USR-2026-0042"
+    },
+    "payload": {
+        "field": "user_account",
+        "old_value": null,
+        "new_value": {
+            "username": "john.doe",
+            "email": "john@example.com",
+            "role": "USER"
+        }
+    }
+}
