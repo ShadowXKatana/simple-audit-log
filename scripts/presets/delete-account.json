@@ -1,0 +1,20 @@
+{
+    "actor": {
+        "user_id": "ADMIN-002",
+        "role": "SUPER_ADMIN",
+        "ip_address": "10.0.0.2"
+    },
+    "event": {
+        "action": "DELETE",
+        "module": "user-management",
+        "outcome": "SUCCESS"
+    },
+    "target": {
+        "resource_type": "user_account",
+        "resource_id": "USR-2025-0099"
+    },
+    "metadata": {
+        "correlation_id": "REQ-DELETE-2026-001",
+        "service_name": "admin-portal"
+    }
+}

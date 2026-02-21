@@ -1,0 +1,16 @@
+{
+    "actor": {
+        "user_id": "CO-001",
+        "role": "COMPLIANCE_OFFICER",
+        "ip_address": "172.16.0.50"
+    },
+    "event": {
+        "action": "ACCESS",
+        "module": "customer-data",
+        "outcome": "SUCCESS"
+    },
+    "target": {
+        "resource_type": "customer_pii",
+        "resource_id": "CUST-2026-1234"
+    }
+}
