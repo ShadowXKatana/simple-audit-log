@@ -123,26 +123,22 @@ The defaults work out of the box for Docker-based setup.
 ### Step 3: Pull Docker images
 
 ```bash
-docker compose --profile infra --profile consumer --profile apps --profile monitor pull
+make pull
 ```
 
 ### Step 4: Start everything
 
 ```bash
-./scripts/start-all.sh
+make start
 ```
-
-This starts all four profiles: infrastructure, consumer, apps, and monitoring.
 
 ### Step 5: Initialize the pipeline
 
 Wait about 30 seconds for services to become healthy, then:
 
 ```bash
-./scripts/init.sh
+make init
 ```
-
-This script will:
 
 1. Create Kafka topics (`audit-log`, `audit-log-dlq`, `audit-log-s3-dlq`)
 2. Register the Avro schema in Schema Registry
@@ -163,19 +159,17 @@ If you're developing on the Go API or Next.js UI and want faster iteration:
 ### Step 1: Start infrastructure only
 
 ```bash
-./scripts/start-infra.sh
-# or equivalently:
-docker compose --profile infra up -d
+make infra
 ```
 
 ### Step 2: Initialize topics and connectors
 
 ```bash
 # Start Kafka Connect
-docker compose --profile consumer up -d
+make consumer
 
 # Wait ~15 seconds, then deploy connectors
-./scripts/init.sh
+make init
 ```
 
 ### Step 3: Run the Producer API locally
@@ -656,13 +650,13 @@ The built-in load test script sends concurrent events to the API:
 
 ```bash
 # Default: 100 events, 10 concurrent
-./scripts/load-test.sh
+make load-test
 
 # Custom: 500 events, 20 concurrent
-./scripts/load-test.sh 500 20
+make load-test COUNT=500 CONCURRENCY=20
 
 # Stress test: 5000 events, 50 concurrent
-./scripts/load-test.sh 5000 50
+make load-test COUNT=5000 CONCURRENCY=50
 ```
 
 The script uses Apache Benchmark (`ab`) if installed, otherwise falls back to parallel curl requests.
@@ -697,13 +691,13 @@ The project uses Docker Compose profiles to control which services start:
 
 ```bash
 # Infrastructure only (for local app development)
-docker compose --profile infra up -d
+make infra
 
 # Infra + consumer (run apps locally)
 docker compose --profile infra --profile consumer up -d
 
 # Everything
-docker compose --profile infra --profile consumer --profile apps --profile monitor up -d
+make start
 
 # View logs for a specific service
 docker compose logs -f kafka-connect
@@ -802,13 +796,13 @@ If any port is already in use, stop the conflicting process or update the port m
 ### Stop all services (keep data)
 
 ```bash
-docker compose --profile infra --profile consumer --profile apps --profile monitor down
+make down
 ```
 
 ### Stop and remove all data
 
 ```bash
-docker compose --profile infra --profile consumer --profile apps --profile monitor down -v
+make clean
 ```
 
 This removes all Docker volumes including Kafka data, Elasticsearch indices, MinIO objects, and Grafana/Prometheus data.
