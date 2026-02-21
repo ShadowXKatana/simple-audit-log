@@ -43,6 +43,7 @@ func main() {
 	}
 
 	connectClient := repository.NewConnectClient(connectURL, brokers)
+	defer connectClient.Close()
 
 	// Initialize usecase layer
 	auditUsecase := usecase.NewAuditUsecase(kafkaProducer, esClient, connectClient)

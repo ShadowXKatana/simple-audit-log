@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -17,6 +18,11 @@ type ConnectClient struct {
 	connectURL string
 	httpClient *http.Client
 	brokers    []string
+
+	// saramaClient is a long-lived Kafka client shared across all GetDLQCounts calls.
+	// It is created lazily on first use to tolerate broker unavailability at startup.
+	saramaClient sarama.Client
+	saramaMu     sync.Mutex
 }
 
 // NewConnectClient creates a new Kafka Connect REST API client.
@@ -82,16 +88,48 @@ func (c *ConnectClient) getConnectorStatus(name string) (string, error) {
 	return result.Connector.State, nil
 }
 
+// getSaramaClient returns the shared Sarama client, creating it on first call.
+// The caller must NOT close the returned client.
+func (c *ConnectClient) getSaramaClient() (sarama.Client, error) {
+	c.saramaMu.Lock()
+	defer c.saramaMu.Unlock()
+
+	if c.saramaClient != nil && !c.saramaClient.Closed() {
+		// Refresh broker metadata so offset lookups stay accurate.
+		if err := c.saramaClient.RefreshMetadata(); err != nil {
+			log.Printf("[dlq] Warning: failed to refresh Sarama metadata, reconnecting: %v", err)
+			_ = c.saramaClient.Close()
+			c.saramaClient = nil
+		} else {
+			return c.saramaClient, nil
+		}
+	}
+
+	cfg := sarama.NewConfig()
+	cfg.Consumer.Return.Errors = true
+	client, err := sarama.NewClient(c.brokers, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Kafka client: %w", err)
+	}
+	c.saramaClient = client
+	return client, nil
+}
+
+// Close releases the shared Sarama client. Call this when the server shuts down.
+func (c *ConnectClient) Close() {
+	c.saramaMu.Lock()
+	defer c.saramaMu.Unlock()
+	if c.saramaClient != nil && !c.saramaClient.Closed() {
+		_ = c.saramaClient.Close()
+	}
+}
+
 // GetDLQCounts returns message counts for the DLQ topics.
 func (c *ConnectClient) GetDLQCounts() (*domain.DLQCount, error) {
-	config := sarama.NewConfig()
-	config.Consumer.Return.Errors = true
-
-	client, err := sarama.NewClient(c.brokers, config)
+	client, err := c.getSaramaClient()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Kafka client for DLQ: %w", err)
+		return nil, fmt.Errorf("failed to get Kafka client for DLQ: %w", err)
 	}
-	defer client.Close()
 
 	esDLQ, err := getTopicMessageCount(client, "audit-log-dlq")
 	if err != nil {
