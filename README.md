@@ -31,10 +31,13 @@ Next.js UI (:3001) ──► Go Producer API (:8080) ──► Kafka (:9092)
 | Infrastructure | `infra/`         | Config for Kafka, Elasticsearch, MinIO, Schema Registry  |
 | Monitoring     | `monitor/`       | Prometheus & Grafana config                              |
 | Scripts        | `scripts/`       | Helper scripts for init, start, and load testing         |
+| Makefile       | `Makefile`       | Convenience targets wrapping scripts and Docker Compose  |
 
 ---
 
 ## Setup
+
+> Run `make help` to list all available targets.
 
 ### Environment Variables
 
@@ -100,7 +103,7 @@ npm install
 Pull all required Docker images:
 
 ```bash
-docker compose --profile infra --profile consumer --profile apps --profile monitor pull
+make pull
 ```
 
 ---
@@ -110,13 +113,13 @@ docker compose --profile infra --profile consumer --profile apps --profile monit
 > **Note:** Infrastructure services (Kafka, Elasticsearch, etc.) must be running first. Start them with:
 >
 > ```bash
-> docker compose --profile infra up -d
+> make infra
 > ```
 >
 > Then initialize topics and connectors:
 >
 > ```bash
-> ./scripts/init.sh
+> make init
 > ```
 
 ### Producer API (Go)
@@ -211,19 +214,13 @@ docker compose --profile consumer up -d
 Start all services at once:
 
 ```bash
-docker compose --profile infra --profile consumer --profile apps --profile monitor up -d
-```
-
-Or use the helper script:
-
-```bash
-./scripts/start-all.sh
+make start
 ```
 
 Then initialize Kafka topics and deploy connectors:
 
 ```bash
-./scripts/init.sh
+make init
 ```
 
 ### Docker Compose Profiles
@@ -238,13 +235,13 @@ Then initialize Kafka topics and deploy connectors:
 ### Stop Everything
 
 ```bash
-docker compose --profile infra --profile consumer --profile apps --profile monitor down
+make down
 ```
 
 To also remove volumes:
 
 ```bash
-docker compose --profile infra --profile consumer --profile apps --profile monitor down -v
+make clean
 ```
 
 ---
@@ -267,7 +264,7 @@ docker compose --profile infra --profile consumer --profile apps --profile monit
 ## Load Testing
 
 ```bash
-./scripts/load-test.sh [count] [concurrency]
+make load-test
 # Example: send 500 events with 20 concurrent requests
-./scripts/load-test.sh 500 20
+make load-test COUNT=500 CONCURRENCY=20
 ```
