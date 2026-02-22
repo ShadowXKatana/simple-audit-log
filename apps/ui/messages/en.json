@@ -112,7 +112,7 @@
     "updatedAt": "Updated {time}",
     "connectors": {
       "title": "Kafka Connect Connectors",
-      "empty": "No connectors found. Run {script} to deploy.",
+      "empty": "No connectors found. Run <code>scripts/init.sh</code> to deploy.",
       "esSink": "Elasticsearch Sink",
       "s3Sink": "S3/MinIO Sink"
     },

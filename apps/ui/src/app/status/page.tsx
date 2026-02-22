@@ -24,9 +24,7 @@ export default function StatusPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold gradient-text">{t('title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('subtitle')}
-          </p>
+          <p className="text-muted-foreground mt-1">{t('subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           {lastUpdated && (
@@ -59,10 +57,10 @@ export default function StatusPage() {
         {connectorEntries.length === 0 ? (
           <div className="glass-card p-8 text-center text-muted-foreground text-sm">
             <Server className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-            {t('connectors.empty', {
-              script: (
+            {t.rich('connectors.empty', {
+              code: (chunks) => (
                 <code className="text-xs bg-secondary px-1.5 py-0.5 rounded">
-                  scripts/init.sh
+                  {chunks}
                 </code>
               ),
             })}
@@ -148,7 +146,9 @@ export default function StatusPage() {
                   >
                     {loading ? '—' : d.count}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">{t('dlq.messages')}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {t('dlq.messages')}
+                  </p>
                 </div>
               </div>
               {d.count > 0 && (
