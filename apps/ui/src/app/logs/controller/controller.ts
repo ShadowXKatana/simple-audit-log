@@ -20,8 +20,12 @@ export interface LogsControllerState {
   error: string | null
   filterAction: string
   filterUserId: string
+  filterDateFrom: string
+  filterDateTo: string
   setFilterAction: (v: string) => void
   setFilterUserId: (v: string) => void
+  setFilterDateFrom: (v: string) => void
+  setFilterDateTo: (v: string) => void
   setPage: (p: number) => void
   search: () => void
 }
@@ -30,6 +34,8 @@ export function useLogsController(pageSize = 50): LogsControllerState {
   const [page, setPage] = useState(0)
   const [filterAction, setFilterAction] = useState('')
   const [filterUserId, setFilterUserId] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
 
   const params = useMemo(
     () => ({
@@ -37,8 +43,11 @@ export function useLogsController(pageSize = 50): LogsControllerState {
       from: page * pageSize,
       action: filterAction || undefined,
       user_id: filterUserId || undefined,
+      // Expand date-only strings to full RFC3339 so ES range covers the entire day
+      date_from: filterDateFrom ? `${filterDateFrom}T00:00:00Z` : undefined,
+      date_to: filterDateTo ? `${filterDateTo}T23:59:59Z` : undefined,
     }),
-    [page, pageSize, filterAction, filterUserId],
+    [page, pageSize, filterAction, filterUserId, filterDateFrom, filterDateTo],
   )
 
   const { logs, total, loading, error, refetch } = useLogs(params)
@@ -60,8 +69,12 @@ export function useLogsController(pageSize = 50): LogsControllerState {
     error,
     filterAction,
     filterUserId,
+    filterDateFrom,
+    filterDateTo,
     setFilterAction,
     setFilterUserId,
+    setFilterDateFrom,
+    setFilterDateTo,
     setPage,
     search,
   }

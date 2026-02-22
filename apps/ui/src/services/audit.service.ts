@@ -47,6 +47,8 @@ export function createAuditService(client: AxiosInstance) {
           ...(params?.from != null && { from: params.from }),
           ...(params?.action && { action: params.action }),
           ...(params?.user_id && { user_id: params.user_id }),
+          ...(params?.date_from && { date_from: params.date_from }),
+          ...(params?.date_to && { date_to: params.date_to }),
         },
       })
       return data

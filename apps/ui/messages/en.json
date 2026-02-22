@@ -46,6 +46,8 @@
       "allActions": "All Actions",
       "userId": "User ID",
       "userIdPlaceholder": "e.g. EMP-001",
+      "dateFrom": "From",
+      "dateTo": "To",
       "searchButton": "Search"
     },
     "table": {

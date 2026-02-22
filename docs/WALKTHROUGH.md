@@ -141,7 +141,7 @@ make init
 ```
 
 1. Create Kafka topics (`audit-log`, `audit-log-dlq`, `audit-log-s3-dlq`)
-2. Register the Avro schema in Schema Registry
+2. **Register the Avro schema** in Schema Registry (`audit-log-value`)
 3. Deploy the Elasticsearch Sink Connector
 4. Deploy the S3 (MinIO) Sink Connector
 5. Confirm MinIO bucket creation (handled by `minio-init` container)
@@ -292,7 +292,7 @@ curl -X POST http://localhost:8080/api/audit/auth -H "Content-Type: application/
 1. Open **http://localhost:3001**
 2. Click **View Logs** in the sidebar
 3. The log viewer table displays the most recent events, sorted by timestamp (newest first)
-4. Use filters for action type or user ID if available
+4. Use the **Action**, **User ID**, **From**, and **To** date filters to narrow results, then click **Search**
 
 ### Option B: Using curl
 
@@ -308,6 +308,12 @@ curl "http://localhost:8080/api/logs?action=UPDATE"
 
 # Filter by user ID
 curl "http://localhost:8080/api/logs?user_id=EMP-001"
+
+# Filter by date range (ISO 8601)
+curl "http://localhost:8080/api/logs?date_from=2026-02-01T00:00:00Z&date_to=2026-02-22T23:59:59Z"
+
+# Combine filters
+curl "http://localhost:8080/api/logs?action=UPDATE&date_from=2026-02-22T00:00:00Z"
 ```
 
 **Response (200 OK):**
@@ -414,12 +420,12 @@ apps/producer/
 
 A Next.js 14 application with Tailwind CSS providing three main pages:
 
-| Page       | URL       | Description                            |
-| ---------- | --------- | -------------------------------------- |
-| Dashboard  | `/`       | Overview stats, recent events feed     |
-| Send Event | `/send`   | Form to compose and send audit events  |
-| View Logs  | `/logs`   | Table of audit logs from Elasticsearch |
-| Status     | `/status` | Connector health and DLQ counts        |
+| Page       | URL       | Description                                                                           |
+| ---------- | --------- | ------------------------------------------------------------------------------------- |
+| Dashboard  | `/`       | Overview stats, recent events feed (polls every 5s)                                   |
+| Send Event | `/send`   | Form to compose and send audit events                                                 |
+| View Logs  | `/logs`   | Table of audit logs from Elasticsearch; filter by action, user ID, and **date range** |
+| Status     | `/status` | Connector health and DLQ counts                                                       |
 
 **Key files:**
 
@@ -449,7 +455,7 @@ The dashboard auto-polls every 5 seconds for live updates.
 | `audit-log-dlq`    | 1          | Dead letters from ES Sink |
 | `audit-log-s3-dlq` | 1          | Dead letters from S3 Sink |
 
-**Schema Registry** (port 8081) stores the Avro schema for `AuditEvent`. The schema defines the full structure:
+**Schema Registry** (port 8081) stores the Avro schema for `AuditEvent`. The schema is automatically registered by `make init` (step 2) using the definition at `infra/schema-registry/audit-log-value.json`. The schema defines the full structure:
 
 - `timestamp` (string) — ISO 8601
 - `log_id` (string) — UUID v7
@@ -502,8 +508,12 @@ To browse archived Parquet files, open the MinIO Console and navigate to the `au
 
 ### 9.7 Monitoring (Prometheus & Grafana)
 
-- **Prometheus:** http://localhost:9090 — Scrapes metrics from Kafka (JMX :7071), Kafka Connect (JMX :7072), and Elasticsearch
+- **Prometheus:** http://localhost:9090 — Scrapes metrics from:
+  - Kafka (JMX Exporter :7071)
+  - Kafka Connect (JMX Exporter :7072)
+  - **Elasticsearch Exporter** (:9114) — exposes ES cluster health, index sizes, query rates, and shard stats in Prometheus format
 - **Grafana:** http://localhost:3000 — Pre-provisioned with Prometheus as a datasource
+- **Elasticsearch Exporter:** http://localhost:9114/metrics — Raw Prometheus metrics from Elasticsearch
 
 ---
 
@@ -521,7 +531,7 @@ Here's what happens from the moment you click "Send" to seeing the log in the vi
 3. Go API validates fields, generates log_id (UUID v7) + timestamp
          │
          ▼
-4. Go API serializes event to Avro (via Schema Registry :8081)
+4. Go API serializes event to Avro (schema `audit-log-value` was pre-registered in Schema Registry by `make init`)
          │
          ▼
 5. Go API produces message to Kafka topic "audit-log" (acks=all, idempotent)
@@ -607,9 +617,9 @@ Base URL: `http://localhost:8080`
 
 ### Query
 
-| Method | Path        | Query Params                        | Description                   |
-| ------ | ----------- | ----------------------------------- | ----------------------------- |
-| GET    | `/api/logs` | `size`, `from`, `action`, `user_id` | Query logs from Elasticsearch |
+| Method | Path        | Query Params                                                | Description                   |
+| ------ | ----------- | ----------------------------------------------------------- | ----------------------------- |
+| GET    | `/api/logs` | `size`, `from`, `action`, `user_id`, `date_from`, `date_to` | Query logs from Elasticsearch |
 
 ### System
 
@@ -680,12 +690,12 @@ open http://localhost:9001
 
 The project uses Docker Compose profiles to control which services start:
 
-| Profile    | Services                                     | Use Case                 |
-| ---------- | -------------------------------------------- | ------------------------ |
-| `infra`    | Kafka, Schema Registry, Elasticsearch, MinIO | Always needed            |
-| `consumer` | Kafka Connect (ES Sink + S3 Sink)            | Needed for data flow     |
-| `apps`     | Producer API, UI                             | Can run locally instead  |
-| `monitor`  | Prometheus, Grafana                          | Optional — observability |
+| Profile    | Services                                            | Use Case                 |
+| ---------- | --------------------------------------------------- | ------------------------ |
+| `infra`    | Kafka, Schema Registry, Elasticsearch, MinIO        | Always needed            |
+| `consumer` | Kafka Connect (ES Sink + S3 Sink)                   | Needed for data flow     |
+| `apps`     | Producer API, UI                                    | Can run locally instead  |
+| `monitor`  | Prometheus, Grafana, Elasticsearch Exporter (:9114) | Optional — observability |
 
 **Common commands:**
 
@@ -765,10 +775,22 @@ curl http://localhost:8081/subjects/audit-log-value/versions
 
 ### Services running out of memory
 
-The stack is designed to fit within ~6 GB of Docker memory. If your machine struggles:
+Each service has memory limits configured in `docker-compose.yml` per the resource budget (total ≤ 6 GB):
 
-- Remove the `monitor` profile (saves ~500 MB)
-- Reduce Elasticsearch heap in `docker-compose.yml`: change `-Xms1g -Xmx1g` to `-Xms512m -Xmx512m`
+| Service         | Limit |
+| --------------- | ----- |
+| Kafka           | 768m  |
+| Schema Registry | 512m  |
+| Kafka Connect   | 768m  |
+| Elasticsearch   | 1536m |
+| MinIO           | 512m  |
+| Producer API    | 128m  |
+| UI              | 384m  |
+| Prometheus      | 256m  |
+| Grafana         | 256m  |
+| ES Exporter     | 128m  |
+
+If the stack still struggles, remove the `monitor` profile first (saves ~640 MB), or lower Elasticsearch heap in `docker-compose.yml`: change `-Xms1g -Xmx1g` to `-Xms512m -Xmx512m`.
 
 ### Port conflicts
 
@@ -785,6 +807,7 @@ Default ports used by the project:
 | 9001 | MinIO Console   |
 | 9090 | Prometheus      |
 | 9092 | Kafka           |
+| 9114 | ES Exporter     |
 | 9200 | Elasticsearch   |
 
 If any port is already in use, stop the conflicting process or update the port mapping in `docker-compose.yml`.
@@ -811,13 +834,14 @@ This removes all Docker volumes including Kafka data, Elasticsearch indices, Min
 
 ## Service URLs Quick Reference
 
-| Service         | URL                                             |
-| --------------- | ----------------------------------------------- |
-| UI Dashboard    | http://localhost:3001                           |
-| Producer API    | http://localhost:8080                           |
-| Elasticsearch   | http://localhost:9200                           |
-| Kafka Connect   | http://localhost:8083                           |
-| Schema Registry | http://localhost:8081                           |
-| MinIO Console   | http://localhost:9001 (minioadmin / minioadmin) |
-| Prometheus      | http://localhost:9090                           |
-| Grafana         | http://localhost:3000                           |
+| Service               | URL                                             |
+| --------------------- | ----------------------------------------------- |
+| UI Dashboard          | http://localhost:3001                           |
+| Producer API          | http://localhost:8080                           |
+| Elasticsearch         | http://localhost:9200                           |
+| Kafka Connect         | http://localhost:8083                           |
+| Schema Registry       | http://localhost:8081                           |
+| MinIO Console         | http://localhost:9001 (minioadmin / minioadmin) |
+| Prometheus            | http://localhost:9090                           |
+| Grafana               | http://localhost:3000                           |
+| ES Exporter (metrics) | http://localhost:9114/metrics                   |

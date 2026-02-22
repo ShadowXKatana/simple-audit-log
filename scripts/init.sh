@@ -13,9 +13,31 @@ echo "========================================"
 echo "🚀 Initializing Audit Log Infrastructure "
 echo "========================================"
 
+# Helper: poll a URL until it responds 200, then continue
+wait_for() {
+    local url=$1
+    local name=$2
+    echo -n "   Waiting for $name"
+    until curl -sf "$url" > /dev/null 2>&1; do
+        echo -n "."
+        sleep 3
+    done
+    echo " ✓"
+}
+
 # 1. Wait for services to be ready
 echo "[1/7] Waiting for services to become healthy..."
-sleep 10 # Basic wait, assumes docker-compose healthecks have run
+wait_for "http://localhost:9092" "Kafka" || true  # nc check via docker below
+docker exec al-kafka kafka-topics --bootstrap-server $KAFKA_BROKER --list > /dev/null 2>&1 || {
+    echo -n "   Waiting for Kafka broker"
+    until docker exec al-kafka kafka-topics --bootstrap-server $KAFKA_BROKER --list > /dev/null 2>&1; do
+        echo -n "."
+        sleep 3
+    done
+    echo " ✓"
+}
+wait_for "$SCHEMA_REGISTRY_URL/subjects" "Schema Registry"
+wait_for "$CONNECT_URL/connectors" "Kafka Connect"
 
 # 2. Create Kafka Topics
 echo "[2/7] Creating Kafka topics..."
@@ -25,9 +47,21 @@ docker exec al-kafka kafka-topics --bootstrap-server $KAFKA_BROKER --create --if
 
 # 3. Register Avro Schema
 echo "[3/7] Registering Avro schema..."
-# Assuming schema file exists or we create a dummy one for now, as it's not present yet
-# curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "@infra/schema-registry/audit-log-value.json" $SCHEMA_REGISTRY_URL/subjects/audit-log-value/versions
-echo "Schema registration skipped (needs schema file at infra/schema-registry/audit-log-value.json)"
+SCHEMA_FILE="infra/schema-registry/audit-log-value.json"
+if [ -f "$SCHEMA_FILE" ]; then
+    RESULT=$(curl -s -o /dev/null -w "%{http_code}" \
+        -X POST \
+        -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+        --data @"$SCHEMA_FILE" \
+        "$SCHEMA_REGISTRY_URL/subjects/audit-log-value/versions")
+    if [ "$RESULT" = "200" ] || [ "$RESULT" = "409" ]; then
+        echo "   Schema registered (HTTP $RESULT)"
+    else
+        echo "   ⚠️  Schema registration returned HTTP $RESULT — check Schema Registry logs"
+    fi
+else
+    echo "   ⚠️  Schema file not found at $SCHEMA_FILE"
+fi
 
 # 4. Deploy ES Sink Connector
 echo "[4/7] Deploying Elasticsearch Sink Connector..."

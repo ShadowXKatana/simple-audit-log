@@ -45,7 +45,15 @@ export function useLogs(params?: LogQuery): UseLogsResult {
 
   useEffect(() => {
     refetch()
-  }, [refetch, params?.size, params?.from, params?.action, params?.user_id])
+  }, [
+    refetch,
+    params?.size,
+    params?.from,
+    params?.action,
+    params?.user_id,
+    params?.date_from,
+    params?.date_to,
+  ])
 
   return { logs, total, loading, error, refetch }
 }
