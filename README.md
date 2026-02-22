@@ -15,9 +15,9 @@ Next.js UI (:3001) ──► Go Producer API (:8080) ──► Kafka (:9092)
 
 ## Prerequisites
 
-- **Docker** & **Docker Compose**
+- **Docker** & **Docker Compose** v2+
 - **Go** 1.22+ (for local producer dev)
-- **Node.js** 20+ & **npm** (for local UI dev)
+- **Node.js** 22+ & **npm** 10+ (for local UI dev)
 
 ---
 
