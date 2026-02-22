@@ -1,0 +1,138 @@
+{
+  "metadata": {
+    "title": "Audit Log — Dashboard",
+    "description": "Centralized Audit & Compliance Logging Service"
+  },
+  "sidebar": {
+    "appName": "Audit Log",
+    "appEnv": "Local Dev",
+    "nav": {
+      "dashboard": "Dashboard",
+      "sendEvent": "Send Event",
+      "logViewer": "Log Viewer",
+      "systemStatus": "System Status"
+    },
+    "footer": {
+      "pipelineActive": "Pipeline Active"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Real-time overview of your audit logging pipeline",
+    "stats": {
+      "totalLogs": "Total Logs",
+      "connectors": "Connectors",
+      "dlqMessages": "DLQ Messages",
+      "quickAction": "Quick Action",
+      "sendEvent": "Send Event"
+    },
+    "error": {
+      "connectionIssue": "Connection Issue"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "live": "LIVE",
+      "viewAll": "View all →",
+      "loading": "Loading...",
+      "empty": "No audit logs yet. Send your first event from the <link>Send Event</link> page."
+    }
+  },
+  "logs": {
+    "title": "Log Viewer",
+    "subtitle": "Search and browse audit logs from Elasticsearch",
+    "filters": {
+      "label": "Filters",
+      "action": "Action",
+      "allActions": "All Actions",
+      "userId": "User ID",
+      "userIdPlaceholder": "e.g. EMP-001",
+      "searchButton": "Search"
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "logId": "Log ID",
+      "userId": "User ID",
+      "action": "Action",
+      "resource": "Resource",
+      "outcome": "Outcome",
+      "loading": "Loading logs...",
+      "empty": "No logs found"
+    },
+    "pagination": {
+      "showing": "Showing {from}–{to} of {total}",
+      "page": "Page {current} of {total}"
+    }
+  },
+  "send": {
+    "title": "Send Audit Event",
+    "subtitle": "Create and send audit events to the pipeline",
+    "presets": {
+      "title": "Quick Presets"
+    },
+    "form": {
+      "actionType": "Action Type",
+      "actor": {
+        "title": "Actor",
+        "userId": "User ID *",
+        "userIdPlaceholder": "e.g. EMP-001",
+        "role": "Role *",
+        "module": "Module",
+        "modulePlaceholder": "e.g. credit-management"
+      },
+      "target": {
+        "title": "Target",
+        "resourceType": "Resource Type *",
+        "resourceTypePlaceholder": "e.g. credit_limit",
+        "resourceId": "Resource ID *",
+        "resourceIdPlaceholder": "e.g. CL-2026-0001",
+        "outcome": "Outcome *"
+      },
+      "changes": "Changes",
+      "payload": "Payload",
+      "field": "Field",
+      "fieldPlaceholder": "e.g. credit_limit",
+      "oldValue": "Old Value",
+      "valuePlaceholder": "JSON or string",
+      "newValue": "New Value",
+      "submit": "Send Event",
+      "submitting": "Sending...",
+      "reset": "Reset"
+    },
+    "result": {
+      "successTitle": "Event Sent Successfully",
+      "kafkaOffset": "Kafka offset:",
+      "errorTitle": "Failed to Send Event"
+    }
+  },
+  "status": {
+    "title": "System Status",
+    "subtitle": "Monitor Kafka Connect connectors and pipeline health",
+    "updatedAt": "Updated {time}",
+    "connectors": {
+      "title": "Kafka Connect Connectors",
+      "empty": "No connectors found. Run {script} to deploy.",
+      "esSink": "Elasticsearch Sink",
+      "s3Sink": "S3/MinIO Sink"
+    },
+    "dlq": {
+      "title": "Dead Letter Queues",
+      "messages": "messages",
+      "needsAttention": "Messages need attention"
+    },
+    "externalTools": {
+      "title": "External Tools",
+      "grafana": {
+        "title": "Grafana",
+        "desc": "Dashboards & Monitoring"
+      },
+      "minio": {
+        "title": "MinIO Console",
+        "desc": "Object Storage"
+      },
+      "kafkaConnect": {
+        "title": "Kafka Connect",
+        "desc": "REST API"
+      }
+    }
+  }
+}

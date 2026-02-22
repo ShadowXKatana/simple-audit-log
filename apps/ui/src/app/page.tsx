@@ -12,10 +12,12 @@ import {
   Zap,
   ArrowRight,
 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 export default function DashboardPage() {
   const { recentLogs, totalLogs, connectors, totalDLQ, loading, error } =
     useDashboardController()
+  const t = useTranslations('dashboard')
 
   const connectorEntries = Object.entries(connectors)
 
@@ -23,10 +25,8 @@ export default function DashboardPage() {
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold gradient-text">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Real-time overview of your audit logging pipeline
-        </p>
+        <h1 className="text-3xl font-bold gradient-text">{t('title')}</h1>
+        <p className="text-muted-foreground mt-1">{t('subtitle')}</p>
       </div>
 
       {/* Stats Grid */}
@@ -36,7 +36,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Total Logs
+                {t('stats.totalLogs')}
               </p>
               <p className="text-3xl font-bold text-foreground mt-1">
                 {loading ? '—' : totalLogs.toLocaleString()}
@@ -53,7 +53,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Connectors
+                {t('stats.connectors')}
               </p>
               <div className="flex items-center gap-2 mt-1">
                 {connectorEntries.length > 0 ? (
@@ -94,7 +94,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                DLQ Messages
+                {t('stats.dlqMessages')}
               </p>
               <p
                 className={`text-3xl font-bold mt-1 ${totalDLQ > 0 ? 'text-amber-400' : 'text-foreground'}`}
@@ -116,10 +116,10 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Quick Action
+                {t('stats.quickAction')}
               </p>
               <p className="text-lg font-semibold text-foreground mt-1 flex items-center gap-2">
-                Send Event
+                {t('stats.sendEvent')}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </p>
             </div>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
             <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
             <div>
               <p className="text-sm font-medium text-amber-400">
-                Connection Issue
+                {t('error.connectionIssue')}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">{error}</p>
             </div>
@@ -151,31 +151,33 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold text-foreground">
-              Recent Activity
+              {t('recentActivity.title')}
             </h2>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-medium">
-              LIVE
+              {t('recentActivity.live')}
             </span>
           </div>
           <Link
             href="/logs"
             className="text-xs text-muted-foreground hover:text-primary transition-colors"
           >
-            View all →
+            {t('recentActivity.viewAll')}
           </Link>
         </div>
 
         {loading ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
-            Loading...
+            {t('recentActivity.loading')}
           </div>
         ) : recentLogs.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
-            No audit logs yet. Send your first event from the{' '}
-            <Link href="/send" className="text-primary hover:underline">
-              Send Event
-            </Link>{' '}
-            page.
+            {t.rich('recentActivity.empty', {
+              link: (chunks) => (
+                <Link href="/send" className="text-primary hover:underline">
+                  {chunks}
+                </Link>
+              ),
+            })}
           </div>
         ) : (
           <div className="divide-y divide-border">
