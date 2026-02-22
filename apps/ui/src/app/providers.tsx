@@ -9,7 +9,13 @@
 
 import { ReactNode } from 'react'
 import { ApiProvider } from '@/providers/api-provider'
+import { Toaster } from 'sonner'
 
 export function Providers({ children }: { children: ReactNode }) {
-  return <ApiProvider>{children}</ApiProvider>
+  return (
+    <ApiProvider>
+      {children}
+      <Toaster position="top-right" richColors closeButton />
+    </ApiProvider>
+  )
 }

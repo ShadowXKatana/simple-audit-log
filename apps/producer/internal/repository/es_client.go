@@ -43,8 +43,8 @@ func NewESClient(addresses []string) (*ESClient, error) {
 
 // Search queries the audit-log index with optional filters.
 func (c *ESClient) Search(query domain.LogQuery) (*domain.LogQueryResult, error) {
-	// Build the index pattern (matches monthly indices like audit-log-2026.02)
-	indexPattern := "audit-log-*"
+	// Build the index pattern (matches the audit-log index written by Kafka Connect)
+	indexPattern := "audit-log*"
 
 	// Build query body
 	must := []map[string]interface{}{}

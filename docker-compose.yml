@@ -141,7 +141,9 @@ services:
   # Profile: consumer (Kafka Connect)
   # ==========================================
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:7.7.1
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
     container_name: al-kafka-connect
     profiles: ['consumer']
     depends_on:
@@ -173,8 +175,6 @@ services:
       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components'
       KAFKA_HEAP_OPTS: '-Xms512m -Xmx768m'
-    volumes:
-      - ./consumer/plugins:/usr/share/confluent-hub-components
     deploy:
       resources:
         limits:
