@@ -27,15 +27,12 @@ wait_for() {
 
 # 1. Wait for services to be ready
 echo "[1/7] Waiting for services to become healthy..."
-wait_for "http://localhost:9092" "Kafka" || true  # nc check via docker below
-docker exec al-kafka kafka-topics --bootstrap-server $KAFKA_BROKER --list > /dev/null 2>&1 || {
-    echo -n "   Waiting for Kafka broker"
-    until docker exec al-kafka kafka-topics --bootstrap-server $KAFKA_BROKER --list > /dev/null 2>&1; do
-        echo -n "."
-        sleep 3
-    done
-    echo " ✓"
-}
+echo -n "   Waiting for Kafka"
+until docker exec al-kafka kafka-topics --bootstrap-server $KAFKA_BROKER --list > /dev/null 2>&1; do
+    echo -n "."
+    sleep 3
+done
+echo " ✓"
 wait_for "$SCHEMA_REGISTRY_URL/subjects" "Schema Registry"
 wait_for "$CONNECT_URL/connectors" "Kafka Connect"
 
