@@ -92,12 +92,16 @@ func (h *AuditHandler) GetLogs(c *gin.Context) {
 	from, _ := strconv.Atoi(c.DefaultQuery("from", "0"))
 	action := c.Query("action")
 	userID := c.Query("user_id")
+	dateFrom := c.Query("date_from")
+	dateTo := c.Query("date_to")
 
 	query := domain.LogQuery{
-		Size:   size,
-		From:   from,
-		Action: action,
-		UserID: userID,
+		Size:     size,
+		From:     from,
+		Action:   action,
+		UserID:   userID,
+		DateFrom: dateFrom,
+		DateTo:   dateTo,
 	}
 
 	result, err := h.usecase.SearchLogs(query)

@@ -54,10 +54,12 @@ type ProduceResult struct {
 
 // LogQuery represents search parameters for querying audit logs.
 type LogQuery struct {
-	Size   int    `json:"size"`
-	From   int    `json:"from"`
-	Action string `json:"action,omitempty"`
-	UserID string `json:"user_id,omitempty"`
+	Size     int    `json:"size"`
+	From     int    `json:"from"`
+	Action   string `json:"action,omitempty"`
+	UserID   string `json:"user_id,omitempty"`
+	DateFrom string `json:"date_from,omitempty"` // RFC3339 range start (inclusive)
+	DateTo   string `json:"date_to,omitempty"`   // RFC3339 range end (inclusive)
 }
 
 // LogQueryResult represents the response from a log search.

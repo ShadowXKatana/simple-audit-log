@@ -6,10 +6,10 @@ services:
     image: confluentinc/cp-kafka:7.7.1
     container_name: al-kafka
     hostname: kafka
-    profiles: ["infra"]
+    profiles: ['infra']
     ports:
-      - "9092:9092"
-      - "7071:7071" # JMX
+      - '9092:9092'
+      - '7071:7071' # JMX
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
@@ -28,10 +28,14 @@ services:
       KAFKA_JMX_HOSTNAME: localhost
     volumes:
       - kafka-data:/var/lib/kafka/data
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     networks:
       - audit-net
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      test: ['CMD-SHELL', 'nc -z localhost 9092 || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,20 +43,24 @@ services:
   schema-registry:
     image: confluentinc/cp-schema-registry:7.7.1
     container_name: al-schema-registry
-    profiles: ["infra"]
+    profiles: ['infra']
     depends_on:
       kafka:
         condition: service_healthy
     ports:
-      - "8081:8081"
+      - '8081:8081'
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:29092'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     networks:
       - audit-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081 || exit 1"]
+      test: ['CMD-SHELL', 'curl -f http://localhost:8081 || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -60,20 +68,24 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     container_name: al-elasticsearch
-    profiles: ["infra"]
+    profiles: ['infra']
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - xpack.security.enrollment.enabled=false
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - 'ES_JAVA_OPTS=-Xms1g -Xmx1g'
     ports:
-      - "9200:9200"
+      - '9200:9200'
     volumes:
       - es-data:/usr/share/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          memory: 1536m
     networks:
       - audit-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      test: ['CMD-SHELL', 'curl -s http://localhost:9200 >/dev/null || exit 1']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -81,20 +93,24 @@ services:
   minio:
     image: minio/minio:RELEASE.2024-08-03T04-33-23Z
     container_name: al-minio
-    profiles: ["infra"]
+    profiles: ['infra']
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
     volumes:
       - minio-data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     networks:
       - audit-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -102,7 +118,7 @@ services:
   minio-init:
     image: minio/mc
     container_name: al-minio-init
-    profiles: ["infra"]
+    profiles: ['infra']
     depends_on:
       minio:
         condition: service_healthy
@@ -123,7 +139,7 @@ services:
   kafka-connect:
     image: confluentinc/cp-kafka-connect:7.7.1
     container_name: al-kafka-connect
-    profiles: ["consumer"]
+    profiles: ['consumer']
     depends_on:
       kafka:
         condition: service_healthy
@@ -134,8 +150,8 @@ services:
       minio:
         condition: service_healthy
     ports:
-      - "8083:8083"
-      - "7072:7072"
+      - '8083:8083'
+      - '7072:7072'
     environment:
       CONNECT_BOOTSTRAP_SERVERS: 'kafka:29092'
       CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
@@ -151,9 +167,13 @@ services:
       CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
       CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+      CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components'
     volumes:
       - ./consumer/plugins:/usr/share/confluent-hub-components
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     networks:
       - audit-net
 
@@ -164,12 +184,12 @@ services:
     build:
       context: ./apps/producer
     container_name: al-producer-api
-    profiles: ["apps"]
+    profiles: ['apps']
     depends_on:
       kafka:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - '8080:8080'
     environment:
       KAFKA_BROKER: kafka:29092
       KAFKA_TOPIC: audit-log
@@ -177,6 +197,10 @@ services:
       ES_URL: http://elasticsearch:9200
       CONNECT_URL: http://kafka-connect:8083
       API_PORT: 8080
+    deploy:
+      resources:
+        limits:
+          memory: 128m
     networks:
       - audit-net
 
@@ -184,42 +208,74 @@ services:
     build:
       context: ./apps/ui
     container_name: al-ui
-    profiles: ["apps"]
+    profiles: ['apps']
     depends_on:
       - producer-api
     ports:
-      - "3001:3000"
+      - '3001:3000'
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8080
+    deploy:
+      resources:
+        limits:
+          memory: 384m
     networks:
       - audit-net
 
   # ==========================================
   # Profile: monitor (Prometheus, Grafana)
   # ==========================================
+  elasticsearch-exporter:
+    image: prometheuscommunity/elasticsearch-exporter:latest
+    container_name: al-es-exporter
+    profiles: ['monitor']
+    command:
+      - '--es.uri=http://elasticsearch:9200'
+      - '--es.all'
+      - '--es.indices'
+    ports:
+      - '9114:9114'
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    networks:
+      - audit-net
+
   prometheus:
     image: prom/prometheus:latest
     container_name: al-prometheus
-    profiles: ["monitor"]
+    profiles: ['monitor']
     ports:
-      - "9090:9090"
+      - '9090:9090'
     volumes:
       - ./monitor/prometheus:/etc/prometheus
       - prometheus-data:/prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     networks:
       - audit-net
 
   grafana:
     image: grafana/grafana:latest
     container_name: al-grafana
-    profiles: ["monitor"]
+    profiles: ['monitor']
     depends_on:
       - prometheus
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - ./monitor/grafana/provisioning:/etc/grafana/provisioning
       - grafana-data:/var/lib/grafana
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     networks:
       - audit-net
 

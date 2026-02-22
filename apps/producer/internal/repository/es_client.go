@@ -65,6 +65,21 @@ func (c *ESClient) Search(query domain.LogQuery) (*domain.LogQueryResult, error)
 		})
 	}
 
+	if query.DateFrom != "" || query.DateTo != "" {
+		rangeClause := map[string]interface{}{}
+		if query.DateFrom != "" {
+			rangeClause["gte"] = query.DateFrom
+		}
+		if query.DateTo != "" {
+			rangeClause["lte"] = query.DateTo
+		}
+		must = append(must, map[string]interface{}{
+			"range": map[string]interface{}{
+				"timestamp": rangeClause,
+			},
+		})
+	}
+
 	var queryBody map[string]interface{}
 	if len(must) > 0 {
 		queryBody = map[string]interface{}{

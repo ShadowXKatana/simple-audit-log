@@ -223,14 +223,16 @@ Then initialize Kafka topics and deploy connectors:
 make init
 ```
 
+> `make init` creates Kafka topics, **registers the Avro schema** in Schema Registry, and deploys both Kafka Connect sink connectors.
+
 ### Docker Compose Profiles
 
-| Profile    | Services                                     |
-| ---------- | -------------------------------------------- |
-| `infra`    | Kafka, Schema Registry, Elasticsearch, MinIO |
-| `consumer` | Kafka Connect (ES Sink + S3 Sink)            |
-| `apps`     | Producer API, UI                             |
-| `monitor`  | Prometheus, Grafana                          |
+| Profile    | Services                                            |
+| ---------- | --------------------------------------------------- |
+| `infra`    | Kafka, Schema Registry, Elasticsearch, MinIO        |
+| `consumer` | Kafka Connect (ES Sink + S3 Sink)                   |
+| `apps`     | Producer API, UI                                    |
+| `monitor`  | Prometheus, Grafana, Elasticsearch Exporter (:9114) |
 
 ### Stop Everything
 
@@ -248,16 +250,17 @@ make clean
 
 ## Service URLs
 
-| Service         | URL                                             |
-| --------------- | ----------------------------------------------- |
-| UI              | http://localhost:3001                           |
-| Producer API    | http://localhost:8080                           |
-| Elasticsearch   | http://localhost:9200                           |
-| Kafka Connect   | http://localhost:8083                           |
-| Schema Registry | http://localhost:8081                           |
-| MinIO Console   | http://localhost:9001 (minioadmin / minioadmin) |
-| Prometheus      | http://localhost:9090                           |
-| Grafana         | http://localhost:3000                           |
+| Service               | URL                                             |
+| --------------------- | ----------------------------------------------- |
+| UI                    | http://localhost:3001                           |
+| Producer API          | http://localhost:8080                           |
+| Elasticsearch         | http://localhost:9200                           |
+| Kafka Connect         | http://localhost:8083                           |
+| Schema Registry       | http://localhost:8081                           |
+| MinIO Console         | http://localhost:9001 (minioadmin / minioadmin) |
+| Prometheus            | http://localhost:9090                           |
+| Grafana               | http://localhost:3000                           |
+| ES Exporter (metrics) | http://localhost:9114/metrics                   |
 
 ---
 
