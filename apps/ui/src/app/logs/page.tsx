@@ -25,8 +25,12 @@ export default function LogsPage() {
     error,
     filterAction,
     filterUserId,
+    filterDateFrom,
+    filterDateTo,
     setFilterAction,
     setFilterUserId,
+    setFilterDateFrom,
+    setFilterDateTo,
     setPage,
     search,
   } = useLogsController()
@@ -39,9 +43,7 @@ export default function LogsPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold gradient-text">{t('title')}</h1>
-        <p className="text-muted-foreground mt-1">
-          {t('subtitle')}
-        </p>
+        <p className="text-muted-foreground mt-1">{t('subtitle')}</p>
       </div>
 
       {/* Filters */}
