@@ -3,7 +3,7 @@
 import { useSendEventController } from './controller/controller'
 import { ACTION_TYPES, ROLES, OUTCOMES, Role, Outcome } from '@/lib/types'
 import { presets } from '@/lib/presets'
-import { Send, CheckCircle2, XCircle, Sparkles, RotateCcw } from 'lucide-react'
+import { Send, Sparkles, RotateCcw } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 export default function SendEventPage() {
@@ -34,8 +34,6 @@ export default function SendEventPage() {
     showChanges,
     showPayload,
     submitting,
-    result,
-    error,
   } = useSendEventController()
 
   const t = useTranslations('send')
@@ -45,9 +43,7 @@ export default function SendEventPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold gradient-text">{t('title')}</h1>
-        <p className="text-muted-foreground mt-1">
-          {t('subtitle')}
-        </p>
+        <p className="text-muted-foreground mt-1">{t('subtitle')}</p>
       </div>
 
       {/* Preset Buttons */}
@@ -263,47 +259,6 @@ export default function SendEventPage() {
           </button>
         </div>
       </form>
-
-      {/* Result / Error */}
-      {result && (
-        <div className="glass-card p-5 border-emerald-500/30 bg-emerald-500/5 animate-fade-in">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-emerald-400">
-                {t('result.successTitle')}
-              </p>
-              <div className="mt-2 space-y-1">
-                <p className="text-xs text-muted-foreground">
-                  <span className="text-foreground font-mono">
-                    {result.log_id}
-                  </span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {t('result.kafkaOffset')}{' '}
-                  <span className="text-foreground font-mono">
-                    {result.offset}
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="glass-card p-5 border-red-500/30 bg-red-500/5 animate-fade-in">
-          <div className="flex items-start gap-3">
-            <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-red-400">
-                {t('result.errorTitle')}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

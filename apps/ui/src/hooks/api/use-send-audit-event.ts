@@ -5,6 +5,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import { toast } from 'sonner'
 import { useApiService } from '@/providers/api-provider'
 import { AuditEvent, ProduceResult } from '@/lib/types'
 
@@ -31,9 +32,14 @@ export function useSendAuditEvent(): UseSendAuditEventResult {
       try {
         const res = await api.sendEvent(event)
         setResult(res)
+        toast.success('Event sent successfully', {
+          description: `log_id: ${res.log_id}  ·  offset: ${res.offset}`,
+        })
         return res
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to send event')
+        const msg = err instanceof Error ? err.message : 'Failed to send event'
+        setError(msg)
+        toast.error('Failed to send event', { description: msg })
         return undefined
       } finally {
         setSubmitting(false)

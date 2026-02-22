@@ -16,21 +16,22 @@ This walkthrough takes you through the entire project from setup to sending your
 6. [Walkthrough: Sending Your First Audit Event](#6-walkthrough-sending-your-first-audit-event)
 7. [Walkthrough: Querying Logs](#7-walkthrough-querying-logs)
 8. [Walkthrough: Checking Pipeline Status](#8-walkthrough-checking-pipeline-status)
-9. [Understanding the Components](#9-understanding-the-components)
-   - [Producer API (Go)](#91-producer-api-go)
-   - [UI (Next.js)](#92-ui-nextjs)
-   - [Kafka & Schema Registry](#93-kafka--schema-registry)
-   - [Kafka Connect (Consumer)](#94-kafka-connect-consumer)
-   - [Elasticsearch](#95-elasticsearch)
-   - [MinIO (S3-compatible storage)](#96-minio-s3-compatible-storage)
-   - [Monitoring (Prometheus & Grafana)](#97-monitoring-prometheus--grafana)
-10. [Data Flow — End to End](#10-data-flow--end-to-end)
-11. [API Reference](#11-api-reference)
-12. [Event Presets](#12-event-presets)
-13. [Load Testing](#13-load-testing)
-14. [Docker Compose Profiles](#14-docker-compose-profiles)
-15. [Troubleshooting](#15-troubleshooting)
-16. [Cleanup](#16-cleanup)
+9. [Walkthrough: Monitoring the Pipeline](#9-walkthrough-monitoring-the-pipeline)
+10. [Understanding the Components](#10-understanding-the-components)
+    - [Producer API (Go)](#101-producer-api-go)
+    - [UI (Next.js)](#102-ui-nextjs)
+    - [Kafka & Schema Registry](#103-kafka--schema-registry)
+    - [Kafka Connect (Consumer)](#104-kafka-connect-consumer)
+    - [Elasticsearch](#105-elasticsearch)
+    - [MinIO (S3-compatible storage)](#106-minio-s3-compatible-storage)
+    - [Monitoring (Prometheus & Grafana)](#107-monitoring-prometheus--grafana)
+11. [Data Flow — End to End](#11-data-flow--end-to-end)
+12. [API Reference](#12-api-reference)
+13. [Event Presets](#13-event-presets)
+14. [Load Testing](#14-load-testing)
+15. [Docker Compose Profiles](#15-docker-compose-profiles)
+16. [Troubleshooting](#16-troubleshooting)
+17. [Cleanup](#17-cleanup)
 
 ---
 
@@ -379,9 +380,133 @@ curl http://localhost:8083/connectors/audit-log-s3-sink/status
 
 ---
 
-## 9. Understanding the Components
+## 9. Walkthrough: Monitoring the Pipeline
 
-### 9.1 Producer API (Go)
+The `monitor` profile starts three services: **Prometheus** (metrics collection), **Grafana** (dashboards), and the **Elasticsearch Exporter** (ES metrics bridge). The profile is optional — the pipeline runs without it, but it gives you real-time visibility into Kafka, Kafka Connect, and Elasticsearch.
+
+### Step 1: Start the monitor profile
+
+If you used `make start`, monitoring is already running. To start it on top of an existing stack:
+
+```bash
+make monitor
+```
+
+Or start everything including monitoring from scratch:
+
+```bash
+make start
+```
+
+### Step 2: Verify all monitor services are up
+
+```bash
+docker compose ps | grep -E 'prometheus|grafana|es-exporter'
+```
+
+All three containers should show status `Up`. Example output:
+
+```
+al-es-exporter   prometheuscommunity/elasticsearch-exporter   Up   0.0.0.0:9114->9114/tcp
+al-grafana       grafana/grafana                              Up   0.0.0.0:3000->3000/tcp
+al-prometheus    prom/prometheus                             Up   0.0.0.0:9090->9090/tcp
+```
+
+### Step 3: Verify raw metrics are being exposed
+
+Confirm each scrape endpoint is reachable:
+
+```bash
+# Elasticsearch metrics via elasticsearch-exporter
+curl -s http://localhost:9114/metrics | grep '^elasticsearch_cluster_health'
+
+# Prometheus self-check
+curl -s http://localhost:9090/-/healthy
+```
+
+### Step 4: Inspect scrape targets in Prometheus
+
+Open **http://localhost:9090/targets** in your browser. All three jobs should show state **UP**:
+
+| Job             | Target                        | What it measures               |
+| --------------- | ----------------------------- | ------------------------------ |
+| `kafka`         | `kafka:7071`                  | Broker throughput, log offsets |
+| `kafka-connect` | `kafka-connect:7072`          | Connector task state, I/O      |
+| `elasticsearch` | `elasticsearch-exporter:9114` | Cluster health, index sizes    |
+
+If a target shows **DOWN**, check the relevant container:
+
+```bash
+docker compose logs kafka
+docker compose logs kafka-connect
+docker compose logs al-es-exporter
+```
+
+### Step 5: Run PromQL queries
+
+In **http://localhost:9090/graph**, paste any of these to explore the pipeline:
+
+```promql
+# Document count per audit index (primary shards)
+elasticsearch_indices_docs_primary{index=~"audit-log.*"}
+
+# Index size on disk (bytes, primary shards)
+elasticsearch_indices_store_size_bytes_primary{index=~"audit-log.*"}
+
+# Elasticsearch cluster health — single-node ES is always yellow (no replicas)
+# Returns 1 for the current color label, 0 for the others
+elasticsearch_cluster_health_status{color="yellow"}
+
+# Active primary shard count (useful numeric health indicator)
+elasticsearch_cluster_health_active_primary_shards
+
+# Latest Kafka log-end offset for the audit-log topic
+kafka_log_log_end_offset{topic="audit-log"}
+```
+
+> **Note:** `elasticsearch_indices_docs` (no suffix) is a cluster-wide total with no `index` label — use `elasticsearch_indices_docs_primary` to filter by index. Single-node Elasticsearch is always `yellow` because replica shards cannot be assigned; this is expected and normal.
+
+### Step 6: Open Grafana and build a dashboard
+
+Open **http://localhost:3000** (default credentials: `admin` / `admin`).
+
+Prometheus is pre-provisioned as the default datasource — no manual setup needed.
+
+#### Create a new dashboard
+
+1. Click **Dashboards → New → New Dashboard**
+2. Click **Add visualization**
+3. Select the **Prometheus** datasource
+4. Enter a PromQL query and click **Run queries**
+5. Choose a visualization type (Time series, Stat, Gauge, Table, etc.)
+6. Click **Apply**, then **Save dashboard**
+
+#### Recommended starter panels
+
+| Panel title          | PromQL                                                                               | Visualization |
+| -------------------- | ------------------------------------------------------------------------------------ | ------------- |
+| ES Document Count    | `elasticsearch_indices_docs_primary{index=~"audit-log.*"}`                           | Stat          |
+| ES Index Size (MB)   | `elasticsearch_indices_store_size_bytes_primary{index=~"audit-log.*"} / 1024 / 1024` | Gauge         |
+| ES Active Shards     | `elasticsearch_cluster_health_active_primary_shards`                                 | Stat          |
+| Kafka Log End Offset | `kafka_log_log_end_offset{topic="audit-log"}`                                        | Time series   |
+
+> Single-node Elasticsearch is always `yellow` — this is expected. Use `elasticsearch_cluster_health_active_primary_shards` instead of the status color for a numeric health check.
+
+### Step 7: Stop the monitor profile
+
+To stop only the monitoring services without affecting the rest of the stack:
+
+```bash
+docker compose --profile monitor down
+```
+
+This frees approximately **640 MB** of memory (Prometheus 256m + Grafana 256m + ES Exporter 128m), which is useful when running the full stack on a constrained machine.
+
+---
+
+## 10. Understanding the Components
+
+### 10.1 Producer API (Go)
 
 **Location:** `apps/producer/`
 
@@ -414,7 +539,7 @@ apps/producer/
 - Queries Elasticsearch for the `/api/logs` endpoint
 - Proxies connector status and DLQ counts via Kafka AdminClient
 
-### 9.2 UI (Next.js)
+### 10.2 UI (Next.js)
 
 **Location:** `apps/ui/`
 
@@ -436,7 +561,7 @@ A Next.js 14 application with Tailwind CSS providing three main pages:
 
 The dashboard auto-polls every 5 seconds for live updates.
 
-### 9.3 Kafka & Schema Registry
+### 10.3 Kafka & Schema Registry
 
 **Kafka** runs in KRaft mode (no ZooKeeper) as a single broker.
 
@@ -466,7 +591,7 @@ The dashboard auto-polls every 5 seconds for live updates.
 - `payload` (optional) — same structure as changes
 - `metadata` (optional) — `correlation_id`, `service_name`
 
-### 9.4 Kafka Connect (Consumer)
+### 10.4 Kafka Connect (Consumer)
 
 **Location:** `consumer/`
 
@@ -488,7 +613,7 @@ Kafka Connect runs two sink connectors that consume from the `audit-log` topic:
 - Flushes every 1000 records or 1 hour
 - Failed records go to `audit-log-s3-dlq`
 
-### 9.5 Elasticsearch
+### 10.5 Elasticsearch
 
 Single-node Elasticsearch 8.15 with security disabled (local dev only).
 
@@ -496,7 +621,7 @@ Single-node Elasticsearch 8.15 with security disabled (local dev only).
 - Heap: 1 GB
 - Index pattern: `audit-log-*` (monthly rotation via TimestampRouter transform)
 
-### 9.6 MinIO (S3-compatible storage)
+### 10.6 MinIO (S3-compatible storage)
 
 MinIO provides S3-compatible object storage for Parquet archives.
 
@@ -506,18 +631,41 @@ MinIO provides S3-compatible object storage for Parquet archives.
 
 To browse archived Parquet files, open the MinIO Console and navigate to the `audit-log-archive` bucket.
 
-### 9.7 Monitoring (Prometheus & Grafana)
+### 10.7 Monitoring (Prometheus & Grafana)
 
-- **Prometheus:** http://localhost:9090 — Scrapes metrics from:
-  - Kafka (JMX Exporter :7071)
-  - Kafka Connect (JMX Exporter :7072)
-  - **Elasticsearch Exporter** (:9114) — exposes ES cluster health, index sizes, query rates, and shard stats in Prometheus format
-- **Grafana:** http://localhost:3000 — Pre-provisioned with Prometheus as a datasource
-- **Elasticsearch Exporter:** http://localhost:9114/metrics — Raw Prometheus metrics from Elasticsearch
+The `monitor` profile adds three containers to the stack:
+
+| Container        | Port | Role                                                    |
+| ---------------- | ---- | ------------------------------------------------------- |
+| `al-prometheus`  | 9090 | Scrapes and stores time-series metrics                  |
+| `al-grafana`     | 3000 | Dashboard and alerting UI                               |
+| `al-es-exporter` | 9114 | Translates Elasticsearch REST stats → Prometheus format |
+
+**Scrape targets** (configured in `monitor/prometheus/prometheus.yml`):
+
+| Job             | Endpoint                      | Source       |
+| --------------- | ----------------------------- | ------------ |
+| `kafka`         | `kafka:7071/metrics`          | JMX Exporter |
+| `kafka-connect` | `kafka-connect:7072/metrics`  | JMX Exporter |
+| `elasticsearch` | `elasticsearch-exporter:9114` | ES Exporter  |
+
+Scrape interval: **15 seconds**.
+
+**Grafana** is pre-provisioned with Prometheus as its default datasource via `monitor/grafana/provisioning/datasources/prometheus.yml` — no manual connection setup needed.
+
+**Key metrics exposed:**
+
+- `elasticsearch_indices_docs_primary{index=~"..."}` — document count per index (primary shards); note `elasticsearch_indices_docs` has no `index` label and cannot be filtered by index
+- `elasticsearch_indices_store_size_bytes_primary{index=~"..."}` — index size on disk
+- `elasticsearch_cluster_health_status{color="yellow"}` — cluster status; single-node ES is always `yellow` (no replicas), which is expected
+- `elasticsearch_cluster_health_active_primary_shards` — active primary shard count; useful as a numeric health indicator
+- `kafka_log_log_end_offset` — latest offsets by topic and partition
+
+See [Section 9](#9-walkthrough-monitoring-the-pipeline) for a step-by-step guide on querying metrics and building Grafana dashboards.
 
 ---
 
-## 10. Data Flow — End to End
+## 11. Data Flow — End to End
 
 Here's what happens from the moment you click "Send" to seeing the log in the viewer:
 
@@ -563,7 +711,7 @@ Here's what happens from the moment you click "Send" to seeing the log in the vi
 
 ---
 
-## 11. API Reference
+## 12. API Reference
 
 Base URL: `http://localhost:8080`
 
@@ -630,7 +778,7 @@ Base URL: `http://localhost:8080`
 
 ---
 
-## 12. Event Presets
+## 13. Event Presets
 
 The project includes sample event presets for quick testing:
 
@@ -654,7 +802,7 @@ These same presets are also available in the UI Send Event page as dropdown opti
 
 ---
 
-## 13. Load Testing
+## 14. Load Testing
 
 The built-in load test script sends concurrent events to the API:
 
@@ -686,7 +834,7 @@ open http://localhost:9001
 
 ---
 
-## 14. Docker Compose Profiles
+## 15. Docker Compose Profiles
 
 The project uses Docker Compose profiles to control which services start:
 
@@ -718,7 +866,7 @@ docker compose --profile apps restart producer-api
 
 ---
 
-## 15. Troubleshooting
+## 16. Troubleshooting
 
 ### Kafka Connect connectors not starting
 
@@ -814,7 +962,7 @@ If any port is already in use, stop the conflicting process or update the port m
 
 ---
 
-## 16. Cleanup
+## 17. Cleanup
 
 ### Stop all services (keep data)
 
