@@ -110,7 +110,11 @@ services:
     networks:
       - audit-net
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      test:
+        [
+          'CMD-SHELL',
+          'mc alias set hc http://localhost:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD >/dev/null 2>&1 && mc ready hc || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
